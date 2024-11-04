@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Go Board Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .game-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            background-color: #DEB887;
+            margin: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .info-panel {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            width: 500px;
+        }
+        .status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .player-info {
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #connectWallet {
+            background-color: #FF6B2C;
+        }
+        .wallet-info {
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Solana Go Board Game</h1>
+        
+        <div class="info-panel">
+            <div class="status">
+                <button id="connectWallet">Connect Solflare Wallet</button>
+                <div class="wallet-info">Balance: <span id="walletBalance">0.000</span> SOL</div>
+            </div>
+            
+            <div class="player-info">
+                <div>Current Player: <span id="playerTurn">Black</span></div>
+                <div>Black invested: <span id="blackInvested">0.000</span> SOL</div>
+                <div>White invested: <span id="whiteInvested">0.000</span> SOL</div>
+            </div>
+            
+            <div class="controls">
+                <button id="playMove">Play Move (0.005 SOL)</button>
+                <button id="pass">Pass</button>
+                <button id="resign">Resign</button>
+            </div>
+        </div>
+
+        <canvas id="goBoard" width="500" height="500"></canvas>
+    </div>
+
+    <script>
+        // Constants and Variables
+        const canvas = document.getElementById('goBoard');
+        const ctx = canvas.getContext('2d');
+        const boardSize = 19;
+        const cellSize = Math.floor(canvas.width / (boardSize + 1));
+        let currentPlayer = 'black';
+        let board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+        let lastClickedPosition = null;
+
+        // Simulated wallet state
+        let walletConnected = false;
+        let walletBalance = 1.0;
+        let blackInvested = 0;
+        let whiteInvested = 0;
+        const MOVE_COST = 0.005;
+
+        // Drawing Functions
+        function drawBoard() {
+            // Clear and set background
+            ctx.fillStyle = '#DEB887';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid lines
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < boardSize; i++) {
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(cellSize, (i + 1) * cellSize);
+                ctx.lineTo(cellSize * boardSize, (i + 1) * cellSize);
+                ctx.stroke();
+                
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo((i + 1) * cellSize, cellSize);
+                ctx.lineTo((i + 1) * cellSize, cellSize * boardSize);
+                ctx.stroke();
+            }
+
+            // Draw star points (hoshi)
+            const starPoints = [3, 9, 15];
+            ctx.fillStyle = '#000';
+            for (let i of starPoints) {
+                for (let j of starPoints) {
+                    ctx.beginPath();
+                    ctx.arc((i + 1) * cellSize, (j + 1) * cellSize, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw stones
+            for (let i = 0; i < boardSize; i++) {
+                for (let j = 0; j < boardSize; j++) {
+                    if (board[i][j]) {
+                        // Draw shadow
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.beginPath();
+                        ctx.arc((j + 1) * cellSize + 2, (i + 1) * cellSize + 2, cellSize * 0.4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Draw stone
+                        ctx.fillStyle = board[i][j];
+                        ctx.strokeStyle = '#000';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc((j + 1) * cellSize, (i + 1) * cellSize, cellSize * 0.4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+
+                        // Add shine effect for white stones
+                        if (board[i][j] === 'white') {
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                            ctx.beginPath();
+                            ctx.arc(
+                                (j + 1) * cellSize - cellSize * 0.15,
+                                (i + 1) * cellSize - cellSize * 0.15,
+                                cellSize * 0.2,
+                                0,
+                                Math.PI * 2
+                            );
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+
+            // Highlight last clicked position
+            if (lastClickedPosition) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(
+                    (lastClickedPosition.j + 1) * cellSize,
+                    (lastClickedPosition.i + 1) * cellSize,
+                    cellSize * 0.45,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.stroke();
+            }
+        }
+
+        // Game Logic Functions
+        function isValidMove(i, j) {
+            return i >= 0 && i < boardSize && j >= 0 && j < boardSize && !board[i][j];
+        }
+
+        function updateDisplay() {
+            document.getElementById('walletBalance').textContent = walletBalance.toFixed(3);
+            document.getElementById('blackInvested').textContent = blackInvested.toFixed(3);
+            document.getElementById('whiteInvested').textContent = whiteInvested.toFixed(3);
+            document.getElementById('playerTurn').textContent = 
+                currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1);
+        }
+
+        // Wallet Functions
+        function connectWallet() {
+            if (!walletConnected) {
+                walletConnected = true;
+                document.getElementById('connectWallet').textContent = 'Wallet Connected';
+                document.getElementById('connectWallet').style.backgroundColor = '#4CAF50';
+                alert('Wallet connected successfully! (Simulated)');
+                updateDisplay();
+            }
+        }
+
+        // Move Functions
+        function playMove() {
+            if (!walletConnected) {
+                alert('Please connect your wallet first!');
+                return;
+            }
+
+            if (!lastClickedPosition) {
+                alert('Please click on the board to select a position first!');
+                return;
+            }
+
+            if (walletBalance < MOVE_COST) {
+                alert('Insufficient balance!');
+                return;
+            }
+
+            const {i, j} = lastClickedPosition;
+            if (isValidMove(i, j)) {
+                walletBalance -= MOVE_COST;
+                if (currentPlayer === 'black') {
+                    blackInvested += MOVE_COST;
+                } else {
+                    whiteInvested += MOVE_COST;
+                }
+
+                board[i][j] = currentPlayer;
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                lastClickedPosition = null;
+                updateDisplay();
+                drawBoard();
+            }
+        }
+
+        // Event Listeners
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const j = Math.round(x / cellSize - 1);
+            const i = Math.round(y / cellSize - 1);
+            
+            if (isValidMove(i, j)) {
+                lastClickedPosition = {i, j};
+                drawBoard();
+            }
+        });
+
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+        document.getElementById('playMove').addEventListener('click', playMove);
+        document.getElementById('pass').addEventListener('click', () => {
+            if (!walletConnected) {
+                alert('Please connect your wallet first!');
+                return;
+            }
+            currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+            updateDisplay();
+        });
+
+        document.getElementById('resign').addEventListener('click', () => {
+            if (!walletConnected) {
+                alert('Please connect your wallet first!');
+                return;
+            }
+            const winner = currentPlayer === 'black' ? 'white' : 'black';
+            const winnerInvested = winner === 'black' ? blackInvested : whiteInvested;
+            const loserInvested = winner === 'black' ? whiteInvested : blackInvested;
+            const reward = (winnerInvested * 0.75 + loserInvested * 0.333).toFixed(3);
+            
+            alert(`Game Over! ${winner} wins and receives ${reward} SOL!`);
+            // Reset game
+            board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+            currentPlayer = 'black';
+            blackInvested = 0;
+            whiteInvested = 0;
+            lastClickedPosition = null;
+            updateDisplay();
+            drawBoard();
+        });
+
+        // Initial setup
+        drawBoard();
+        updateDisplay();
+    </script>
+</body>
+</html>
