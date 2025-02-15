@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="QuickSale - Premium Time-Sensitive Marketplace for Exclusive Deals">
+    <title>QuickSale Premium Marketplace</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Solana Web3 -->
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    
+    <!-- Framer Motion for animations -->
+    <script src="https://unpkg.com/framer-motion/dist/framer-motion.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        :root {
+            --primary-color: #3B82F6;
+            --secondary-color: #10B981;
+            --accent-color: #F59E0B;
+            --danger-color: #EF4444;
+            --text-primary: #1F2937;
+            --text-secondary: #4B5563;
+        }
+
+        .listing-card {
+            border: 1px solid #E5E7EB;
+            background: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .listing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .time-left {
+            background: var(--danger-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+
+        .price-tag {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .verification-badge {
+            background: var(--secondary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .listing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background: #333;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            transform: translateY(20px);
+            transition: 0.3s;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4">
+        <!-- Header -->
+        <header class="py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl font-bold text-gray-900">QuickSale</h1>
+                <p class="text-xl text-gray-600">Premium Time-Sensitive Marketplace</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-4">
+                <div id="wallet-info" class="flex items-center gap-2 bg-gray-100 p-2 rounded-lg">
+                    <span class="wallet-balance text-gray-700">0 SOL</span>
+                    <span id="wallet-status" class="text-sm font-medium">Not Connected</span>
+                </div>
+                
+                <button id="connect-wallet" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Connect Wallet
+                </button>
+                
+                <button id="list-item" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    List Your Item
+                </button>
+            </div>
+        </header>
+
+        <!-- Trust Badges -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 py-6 border-y border-gray-200 my-6">
+            <div class="flex items-center justify-center gap-2 p-4 bg-white rounded-lg shadow-sm">
+                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span class="font-medium">Instant Settlements</span>
+            </div>
+            
+            <div class="flex items-center justify-center gap-2 p-4 bg-white rounded-lg shadow-sm">
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                <span class="font-medium">Verified Sellers</span>
+            </div>
+            
+            <div class="flex items-center justify-center gap-2 p-4 bg-white rounded-lg shadow-sm">
+                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="font-medium">Time-Limited Deals</span>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <div class="flex-1 min-w-[200px]">
+                <input type="text" id="search" placeholder="Search listings..." 
+                       class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+            </div>
+            
+            <select id="category-filter" class="px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+                <option value="">All Categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="furniture">Furniture</option>
+                <option value="clothing">Clothing</option>
+                <option value="collectibles">Collectibles</option>
+            </select>
+            
+            <select id="sort-filter" class="px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all">
+                <option value="time">Time Left</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Seller Rating</option>
+            </select>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl flex flex-col items-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                <p class="mt-4 text-lg font-medium">Processing Transaction...</p>
+                <p class="text-gray-500 text-sm mt-2">Please confirm in your wallet</p>
+            </div>
+        </div>
+
+        <!-- Listings Container -->
+        <div id="listings" class="listing-grid"></div>
+
+        <!-- List Item Modal -->
+        <div id="list-modal" class="modal">
+            <div class="modal-content">
+                <h2 class="text-2xl font-bold mb-4">List Your Item</h2>
+                <form id="listing-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Title</label>
+                        <input type="text" name="title" required class="w-full px-4 py-2 rounded-lg border">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Description</label>
+                        <textarea name="description" required class="w-full px-4 py-2 rounded-lg border"></textarea>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Price (SOL)</label>
+                            <input type="number" step="0.1" min="0.1" name="price" required class="w-full px-4 py-2 rounded-lg border">
+                            <p class="text-sm text-gray-500 mt-1">Price will increase by 0.3% every hour if not sold</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="text-sm text-gray-600">All listings are active for 24 hours</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-4">
+                        <button type="button" class="px-6 py-2 rounded-lg border" onclick="closeListModal()">Cancel</button>
+                        <button type="submit" class="px-6 py-2 rounded-lg bg-blue-500 text-white">List Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced Listing Class
+        class Listing {
+            constructor(data) {
+                Object.assign(this, data);
+                this.createdAt = new Date();
+                this.basePrice = data.price;
+                this.instantSettlement = data.instantSettlement || false;
+                this.platformFee = this.instantSettlement ? 0.12 : 0.08; // 12% for instant, 8% for 24h
+                this.hourlyIncrease = 0.003; // 0.3% per hour
+                this.expiresAt = new Date(Date.now() + (24 * 60 * 60 * 1000)); // Always 24h
+            }
+
+            get currentPrice() {
+                const now = new Date();
+                const hoursElapsed = Math.floor((now - this.createdAt) / (1000 * 60 * 60));
+                const increase = 1 + (this.hourlyIncrease * hoursElapsed);
+                return this.basePrice * increase;
+            }
+
+            get finalPrice() {
+                const price = this.currentPrice;
+                return price + (price * this.platformFee);
+            }
+
+            get timeLeftString() {
+                const now = new Date();
+                const diff = this.expiresAt - now;
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                
+                return `${hours}h ${minutes}m left`;
+            }
+
+            get priceIncreasePercentage() {
+                return Math.round(((this.currentPrice - this.basePrice) / this.basePrice) * 100);
+            }
+
+            get platformFeeAmount() {
+                return this.currentPrice * this.platformFee;
+            }
+        }
+
+        // Wallet Management
+        class WalletManager {
+            constructor() {
+                this.connected = false;
+                this.publicKey = null;
+                this.balance = 0;
+            }
+
+            async connect() {
+                try {
+                    if (typeof window.solana === 'undefined') {
+                        throw new Error('Phantom wallet not installed');
+                    }
+
+                    const response = await window.solana.connect();
+                    this.publicKey = response.publicKey.toString();
+                    this.connected = true;
+
+                    // Get balance
+                    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'));
+                    this.balance = await connection.getBalance(response.publicKey);
+                    this.balance = this.balance / solanaWeb3.LAMPORTS_PER_SOL;
+
+                    this.updateUI();
+                    return true;
+                } catch (error) {
+                    console.error('Wallet connection error:', error);
+                    alert('Failed to connect wallet: ' + error.message);
+                    return false;
+                }
+            }
+
+            updateUI() {
+                const statusEl = document.getElementById('wallet-status');
+                const balanceEl = document.querySelector('.wallet-balance');
+                const connectBtn = document.getElementById('connect-wallet');
+
+                if (this.connected) {
+                    statusEl.textContent = `${this.publicKey.slice(0,4)}...${this.publicKey.slice(-4)}`;
+                    balanceEl.textContent = `${this.balance.toFixed(2)} SOL`;
+                    connectBtn.textContent = 'Connected';
+                    connectBtn.classList.add('bg-green-500');
+                    connectBtn.classList.remove('bg-blue-500');
+                } else {
+                    statusEl.textContent = 'Not Connected';
+                    balanceEl.textContent = '0 SOL';
+                    connectBtn.textContent = 'Connect Wallet';
+                    connectBtn.classList.add('bg-blue-500');
+                    connectBtn.classList.remove('bg-green-500');
+                }
+            }
+        }
+
+        // Marketplace Management
+        class Marketplace {
+            constructor() {
+                this.listings = [];
+                this.wallet = new WalletManager();
+                this.filters = {
+                    search: '',
+                    category: '',
+                    sort: 'time'
+                };
+            }
+
+            async initialize() {
+                // Load sample data
+                this.listings = sampleListings.map(data => new Listing(data));
+                this.setupEventListeners();
+                this.render();
+            }
+
+            setupEventListeners() {
+                // Wallet connection
+                document.getElementById('connect-wallet').addEventListener('click', () => this.wallet.connect());
+
+                // List item modal
+                document.getElementById('list-item').addEventListener('click', () => this.openListModal());
+                document.getElementById('listing-form').addEventListener('submit', (e) => this.handleNewListing(e));
+
+                // Filters
+                document.getElementById('search').addEventListener('input', (e) => {
+                    this.filters.search = e.target.value.toLowerCase();
+                    this.render();
+                });
+
+                document.getElementById('category-filter').addEventListener('change', (e) => {
+                    this.filters.category = e.target.value;
+                    this.render();
+                });
+
+                document.getElementById('sort-filter').addEventListener('change', (e) => {
+                    this.filters.sort = e.target.value;
+                    this.render();
+                });
+            }
+
+            openListModal() {
+                if (!this.wallet.connected) {
+                    alert('Please connect your wallet first');
+                    return;
+                }
+                document.getElementById('list-modal').classList.add('active');
+            }
+
+            closeListModal() {
+                document.getElementById('list-modal').classList.remove('active');
+            }
+
+            async handleNewListing(e) {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                
+                const newListing = new Listing({
+                    id: Date.now().toString(),
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    price: parseFloat(formData.get('price')),
+                    originalPrice: parseFloat(formData.get('price')) * 1.2,
+                    timeLeft: formData.get('duration'),
+                    location: 'Your Location',
+                    sellerRating: 5.0,
+                    verificationLevel: 'New Seller',
+                    category: 'Other'
+                });
+
+                this.listings.unshift(newListing);
+                this.render();
+                this.closeListModal();
+                e.target.reset();
+            }
+
+            async handlePurchase(id, useInstantSettlement = false) {
+                if (!this.wallet.connected) {
+                    alert('Please connect your wallet first');
+                    return;
+                }
+
+                const listing = this.listings.find(l => l.id === id);
+                if (!listing) return;
+
+                // Update settlement choice
+                listing.instantSettlement = useInstantSettlement;
+                
+                try {
+                    document.getElementById('loading').classList.remove('hidden');
+
+                    // Calculate final price with platform fee
+                    const finalPrice = listing.finalPrice;
+                    const feePercentage = listing.platformFee * 100;
+
+                    // Simulate Solana transaction
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    // Remove the listing after successful purchase
+                    this.listings = this.listings.filter(l => l.id !== id);
+                    this.render();
+
+                    alert(
+                        `Successfully purchased ${listing.title}\n` +
+                        `Base Price: ${listing.currentPrice.toFixed(2)} SOL\n` +
+                        `Platform Fee (${feePercentage}%): ${listing.platformFeeAmount.toFixed(2)} SOL\n` +
+                        `Final Price: ${finalPrice.toFixed(2)} SOL\n\n` +
+                        `${useInstantSettlement ? 'Instant settlement applied' : 'Standard 24h settlement'}`
+                    );
+                } catch (error) {
+                    alert('Purchase failed: ' + error.message);
+                } finally {
+                    document.getElementById('loading').classList.add('hidden');
+                }
+            }
+
+            handleMessage(id) {
+                const listing = this.listings.find(l => l.id === id);
+                if (listing) {
+                    alert(`Opening chat with seller of: ${listing.title}`);
+                }
+            }
+
+            getFilteredAndSortedListings() {
+                let filtered = this.listings;
+
+                // Apply search filter
+                if (this.filters.search) {
+                    filtered = filtered.filter(l => 
+                        l.title.toLowerCase().includes(this.filters.search) ||
+                        l.description.toLowerCase().includes(this.filters.search)
+                    );
+                }
+
+                // Apply category filter
+                if (this.filters.category) {
+                    filtered = filtered.filter(l => l.category.toLowerCase() === this.filters.category);
+                }
+
+                // Apply sorting
+                switch (this.filters.sort) {
+                    case 'price-low':
+                        filtered.sort((a, b) => a.price - b.price);
+                        break;
+                    case 'price-high':
+                        filtered.sort((a, b) => b.price - a.price);
+                        break;
+                    case 'rating':
+                        filtered.sort((a, b) => b.sellerRating - a.sellerRating);
+                        break;
+                    case 'time':
+                    default:
+                        filtered.sort((a, b) => a.expiresAt - b.expiresAt);
+                }
+
+                return filtered;
+            }
+
+            render() {
+                const listingsContainer = document.getElementById('listings');
+                const filteredListings = this.getFilteredAndSortedListings();
+
+                listingsContainer.innerHTML = filteredListings.map(listing => `
+                    <div class="listing-card p-6 rounded-xl">
+                        <div class="time-left">${listing.timeLeftString}</div>
+                        
+                        <div class="text-red-500 font-medium mb-2">${listing.urgency}</div>
+                        
+                        <h3 class="text-xl font-bold mb-2 pr-20">${listing.title}</h3>
+                        
+                        <div class="text-gray-600 mb-2">
+                            <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            ${listing.location}
+                        </div>
+                        
+                        <p class="text-gray-700 mb-4">${listing.description}</p>
+                        
+                        <div class="flex flex-col gap-2 mb-4">
+                            <div class="price-tag">
+                                <span>${listing.currentPrice.toFixed(2)} SOL</span>
+                                <span class="text-sm">(+${listing.priceIncreasePercentage}%)</span>
+                            </div>
+                            <div class="flex gap-2 text-sm">
+                                <span class="text-gray-600">Platform Fee (${listing.platformFee * 100}%): ${listing.platformFeeAmount.toFixed(2)} SOL</span>
+                                <span class="font-bold">Final Price: ${listing.finalPrice.toFixed(2)} SOL</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="flex items-center">
+                                <span class="text-yellow-500">★</span>
+                                <span class="ml-1">${listing.sellerRating}</span>
+                            </div>
+                            <div class="verification-badge">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                                ${listing.verificationLevel}
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <div class="flex-1 flex gap-2">
+                                <button class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors ${!this.wallet.connected ? 'opacity-50 cursor-not-allowed' : ''}"
+                                        onclick="marketplace.handlePurchase('${listing.id}', false)"
+                                        ${!this.wallet.connected ? 'disabled' : ''}>
+                                    24h Settlement (8% fee)
+                                </button>
+                                <button class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors ${!this.wallet.connected ? 'opacity-50 cursor-not-allowed' : ''}"
+                                        onclick="marketplace.handlePurchase('${listing.id}', true)"
+                                        ${!this.wallet.connected ? 'disabled' : ''}>
+                                    Instant Settlement (12% fee)
+                                </button>
+                            </div>
+                            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                    onclick="marketplace.handleMessage('${listing.id}')">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Sample Data
+        // Sample Data with 24-hour quick sale listings
+        const sampleListings = [
+            {
+                id: '1',
+                title: 'Moving Sale - Premium Furniture Set',
+                urgency: 'Need to sell today! Price increases 0.3% hourly',
+                location: 'San Francisco, CA',
+                price: 2.5,
+                instantSettlement: false,
+                description: 'Luxury furniture set, must sell before international move. 24-hour listing with 8% platform fee.',
+                sellerRating: 4.9,
+                verificationLevel: 'Premium Seller',
+                category: 'Furniture'
+            },
+            {
+                id: '2',
+                title: 'Quick Sale - MacBook Pro 2023',
+                urgency: 'Instant settlement available (12% fee)',
+                location: 'New York, NY',
+                price: 3.8,
+                instantSettlement: true,
+                description: 'M2 MacBook Pro, 16GB RAM, 512GB SSD. Perfect condition, includes original box and accessories.',
+                sellerRating: 4.8,
+                verificationLevel: 'Verified Seller',
+                category: 'Electronics'
+            },
+            {
+                id: '3',
+                title: 'Limited Edition Collectible Watch',
+                urgency: 'Price increases by 0.3% every hour',
+                location: 'Los Angeles, CA',
+                price: 1.2,
+                instantSettlement: false,
+                description: 'Rare limited edition watch, numbered series. Complete with certificate of authenticity.',
+                sellerRating: 5.0,
+                verificationLevel: 'Premium Seller',
+                category: 'Collectibles'
+            }
+        ];
+
+        // Initialize Marketplace
+        const marketplace = new Marketplace();
+        marketplace.initialize();
+
+        // Global function for modal
+        window.closeListModal = () => marketplace.closeListModal();
+    </script>
+</body>
+</html>
