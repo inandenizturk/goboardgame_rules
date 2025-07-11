@@ -1,0 +1,2113 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Minesweeper with Nosana Betting</title>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <style>
+  :root {
+    --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --container-bg: rgba(255, 255, 255, 0.15);
+    --container-border: rgba(255, 255, 255, 0.3);
+    --text-color: white;
+    --button-bg: linear-gradient(45deg, #4CAF50, #45a049);
+    --shadow-color: rgba(0, 0, 0, 0.4);
+  }
+  [data-theme="dark"] { 
+    --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
+    --container-bg: rgba(255, 255, 255, 0.05);
+    --button-bg: linear-gradient(45deg, #0f3460, #16537e);
+  }
+  [data-theme="neon"] { 
+    --bg-gradient: linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%); 
+    --container-bg: rgba(0, 0, 0, 0.3);
+    --button-bg: linear-gradient(45deg, #ff006e, #8338ec);
+    --text-color: #00f5ff;
+  }
+  [data-theme="cyberpunk"] {
+    --bg-gradient: linear-gradient(135deg, #0a0a0a 0%, #1a0033 50%, #330066 100%);
+    --container-bg: rgba(0, 255, 255, 0.1);
+    --button-bg: linear-gradient(45deg, #00ff41, #00d4aa);
+    --text-color: #00ff41;
+    --shadow-color: rgba(0, 255, 65, 0.3);
+  }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    color: var(--text-color);
+    padding: 10px;
+    overflow-x: hidden;
+    transition: all 0.5s ease;
+  }
+  @media (max-width: 768px) {
+    body { padding: 5px; font-size: 14px; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 2px; font-size: 12px; }
+  }
+  .game-container {
+    background: var(--container-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
+    padding: 25px;
+    box-shadow: 0 20px 60px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,0.2);
+    border: 2px solid var(--container-border);
+    max-width: 95vw;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .game-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s;
+  }
+  .game-container:hover::before { left: 100%; }
+  @media (max-width: 768px) {
+    .game-container { padding: 20px; border-radius: 20px; max-width: 98vw; }
+  }
+  @media (max-width: 480px) {
+    .game-container { padding: 15px; border-radius: 15px; }
+  }
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 2.2em;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  .game-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    font-weight: bold;
+    gap: 15px;
+  }
+  .controls {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  button {
+    background: var(--button-bg);
+    border: none;
+    color: white;
+    padding: 14px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 15px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+    min-height: 48px;
+  }
+  button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+  }
+  button:hover::before { left: 100%; }
+  button:hover { 
+    transform: translateY(-3px) scale(1.02); 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+  button:active { 
+    transform: translateY(-1px) scale(0.98); 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  @media (max-width: 768px) {
+    button { padding: 16px 20px; font-size: 16px; min-height: 52px; }
+  }
+  @media (max-width: 480px) {
+    button { padding: 18px 16px; font-size: 14px; min-height: 56px; width: 100%; margin: 4px 0; }
+  }
+  .game-board-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  #gameBoard {
+    border: 3px solid var(--container-border);
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    touch-action: manipulation;
+  }
+  #gameBoard:hover { box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+  .particle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 10;
+    border-radius: 15px;
+  }
+  .status {
+    text-align: center;
+    font-size: 1.3em;
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+  .instructions {
+    text-align: center;
+    font-size: 0.9em;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: var(--container-bg);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--container-border);
+    max-width: 90%;
+    min-width: 300px;
+  }
+  @keyframes winCelebration {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.05); }
+    50% { transform: scale(0.95); }
+    75% { transform: scale(1.02); }
+  }
+  @keyframes gameOverShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .win-animation { animation: winCelebration 0.6s ease-out; }
+  .game-over-animation { animation: gameOverShake 0.5s ease-out; }
+  @media (max-width: 768px) {
+    body { padding: 5px; }
+    .game-container { padding: 15px; margin: 5px; }
+    h1 { font-size: 1.8em; }
+    .game-stats { flex-direction: column; gap: 10px; font-size: 0.9em; }
+    .controls { flex-direction: column; }
+    button { padding: 15px 25px; font-size: 1.1em; min-height: 50px; width: 100%; max-width: 250px; }
+    #gameBoard { max-width: 100%; }
+    .instructions { font-size: 0.8em; }
+  }
+  @media (hover: none) and (pointer: coarse) {
+    button:hover { transform: none; }
+    #gameBoard { cursor: default; }
+  }
+  .wallet-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: var(--container-bg);
+    border-radius: 15px;
+    border: 1px solid var(--container-border);
+  }
+  .wallet-status {
+    font-size: 0.9em;
+    opacity: 0.9;
+  }
+  .wallet-address {
+    font-family: monospace;
+    font-size: 0.8em;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .wallet-button {
+    background: linear-gradient(45deg, #9945ff, #14f195);
+    min-width: 120px;
+  }
+  .wallet-button:hover {
+    background: linear-gradient(45deg, #8a3ff0, #12d687);
+  }
+  .wallet-button:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+    .multiplayer-section {
+      background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+      padding: 20px;
+      border-radius: 15px;
+      margin: 20px 0;
+      color: white;
+      display: none;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      border: 2px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .room-info {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      color: #ffd700;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .pot-display {
+      background: linear-gradient(135deg, #f7931e 0%, #ffd700 100%);
+      color: #2d3748;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: bold;
+      text-align: center;
+      margin: 15px 0;
+      display: none;
+      font-size: 1.1em;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+      border: 2px solid rgba(255, 215, 0, 0.6);
+    }
+
+    .player-turn {
+      background: rgba(72, 187, 120, 0.3);
+      color: #48bb78;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+      display: none;
+      font-size: 1.05em;
+      border: 2px solid rgba(72, 187, 120, 0.5);
+      box-shadow: 0 4px 15px rgba(72, 187, 120, 0.2);
+    }
+
+    .move-counter {
+      background: rgba(255, 165, 0, 0.3);
+      color: #ffa500;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+      font-size: 1.05em;
+      border: 2px solid rgba(255, 165, 0, 0.5);
+      display: none;
+      box-shadow: 0 4px 15px rgba(255, 165, 0, 0.2);
+    }
+
+    .pricing-rules {
+      margin: 15px 0;
+      padding: 18px;
+      background: linear-gradient(45deg, rgba(255,215,0,0.25), rgba(255,165,0,0.25));
+      border-radius: 15px;
+      font-size: 1em;
+      border: 2px solid rgba(255,215,0,0.4);
+      box-shadow: 0 6px 20px rgba(255, 215, 0, 0.2);
+    }
+
+    .pricing-highlight {
+      background: linear-gradient(135deg, #ff6b35, #f7931e);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      display: inline-block;
+      margin: 2px;
+      box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+    }
+
+    .multiplayer-section button {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1.05em;
+      margin: 5px;
+      box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+    }
+
+    .multiplayer-section button:hover {
+      background: linear-gradient(135deg, #38a169 0%, #48bb78 100%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(72, 187, 120, 0.5);
+    }
+
+    .investment-tracker {
+      background: rgba(138, 43, 226, 0.2);
+      color: #da70d6;
+      padding: 12px 16px;
+      border-radius: 12px;
+      text-align: center;
+      margin: 15px 0;
+      font-weight: bold;
+      font-size: 1.05em;
+      border: 2px solid rgba(138, 43, 226, 0.4);
+      display: none;
+      box-shadow: 0 4px 15px rgba(138, 43, 226, 0.2);
+    }
+
+    .room-type-btn {
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9em;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .room-type-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .room-type-btn:disabled {
+      background: #666 !important;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    .room-type-btn.selected {
+      border: 3px solid #ffd700;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .room-type-btn.locked::after {
+      content: '🔒';
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      font-size: 0.8em;
+    }
+
+  @media (max-width: 768px) {
+    .wallet-section { 
+      flex-direction: column; 
+      gap: 8px; 
+      padding: 12px;
+    }
+    .wallet-button { 
+      width: 100%; 
+      min-width: auto;
+    }
+    .multiplayer-section {
+      padding: 15px;
+    }
+    .pricing-rules {
+      font-size: 0.9em;
+      padding: 15px;
+    }
+  }
+  </style>
+  </head>
+  <body>
+  <div class="game-container">
+    <div class="game-header">
+      <h1>💣 Premium Minesweeper</h1>
+      <button onclick="toggleSettings()">⚙️</button>
+    </div>
+    
+    <div class="wallet-section">
+      <div class="wallet-status" id="walletStatus">Wallet: Not Connected</div>
+      <div class="wallet-address" id="walletAddress" style="display: none;"></div>
+      <button class="wallet-button" id="walletButton" onclick="toggleWallet()">Connect Wallet</button>
+    </div>
+    
+    <div class="game-stats">
+      <div>Mines: <span id="mineCounter">10</span></div>
+      <div>Time: <span id="timer">0</span>s</div>
+      <div>Won: <span id="gamesWon">0</span></div>
+    </div>
+    
+    <div class="controls">
+      <button onclick="setDifficulty('easy')" class="active">Easy (8×8, 10)</button>
+      <button onclick="setDifficulty('medium')">Medium (16×16, 40)</button>
+      <button onclick="setDifficulty('hard')">Hard (30×16, 99)</button>
+    </div>
+
+    <div class="multiplayer-section" id="multiplayerSection">
+      <div class="room-info" id="roomInfo">🎮 Single Player Mode</div>
+      
+      <div class="player-progress" id="playerProgress" style="background: rgba(138, 43, 226, 0.2); color: #da70d6; padding: 12px 16px; border-radius: 12px; text-align: center; margin: 15px 0; font-weight: bold; font-size: 1.05em; border: 2px solid rgba(138, 43, 226, 0.4); box-shadow: 0 4px 15px rgba(138, 43, 226, 0.2);">
+        🏆 Level 0 | 0 Wins | 0.0000 SOL Invested
+      </div>
+      
+      <div class="room-type-selection" style="margin: 15px 0; padding: 15px; background: rgba(255, 215, 0, 0.1); border-radius: 12px; border: 2px solid rgba(255, 215, 0, 0.3);">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 10px; color: #ffd700;">🎯 Select Room Type</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+          <button onclick="selectRoomType('starter')" id="starterRoomBtn" class="room-type-btn" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); flex: 1; min-width: 120px;">
+            2-Player Starter<br><small>0.0031 SOL</small>
+          </button>
+          <button onclick="selectRoomType('advanced')" id="advancedRoomBtn" class="room-type-btn" style="background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); flex: 1; min-width: 120px;">
+            3-Player Advanced<br><small>0.005 SOL</small>
+          </button>
+          <button onclick="selectRoomType('expert')" id="expertRoomBtn" class="room-type-btn" style="background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); flex: 1; min-width: 120px;">
+            4-Player Expert<br><small>0.008 SOL</small>
+          </button>
+        </div>
+      </div>
+      
+      <div class="pot-display" id="potDisplay">💎 Total Pot: 0 SOL</div>
+      <div class="game-timer" id="gameTimer" style="background: rgba(76, 175, 80, 0.1); color: #4caf50; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; font-weight: bold;">⏱️ Game Time: 00:00</div>
+      <div class="player-turn" id="playerTurn">🎯 Your turn!</div>
+      <div class="move-counter" id="moveCounter">🎮 Moves Made: 0 | Cost: 0 SOL</div>
+      <div class="investment-tracker" id="investmentTracker">💰 Your Investment: 0 SOL</div>
+      
+      <div class="players-display" id="playersDisplay" style="background: rgba(33, 150, 243, 0.1); color: #2196f3; padding: 15px; border-radius: 12px; margin: 15px 0; border: 2px solid rgba(33, 150, 243, 0.3);">
+        <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">👥 Room Players</div>
+        <div id="playersList" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+          <!-- Players will be dynamically added here -->
+        </div>
+      </div>
+      
+      <div class="pricing-rules">
+        <strong>🎮 Multiplayer Betting Rules:</strong><br><br>
+        💰 <strong>Entry Fee:</strong> <span class="pricing-highlight entry-fee">0.0031 SOL</span> per new game<br>
+        🎯 <strong>Move Cost:</strong> <span class="pricing-highlight move-cost">0.0025 SOL</span> per game action<br>
+        🏆 <strong>Winner Payout:</strong> <span class="pricing-highlight winner-payout">7%</span> of total pot<br>
+        👥 <strong>Players:</strong> <span class="players-info">2-Player Starter rooms</span><br>
+        ⚡ <strong>Transactions:</strong> Real-time SOL payments
+      </div>
+      
+      <div style="text-align: center;">
+        <button id="createRoomBtn" onclick="createRoom()">🏠 Create Room (0.0031 SOL)</button>
+        <button onclick="joinRoom()">🚪 Join Room</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button onclick="newGame()">New Game</button>
+      <button onclick="stopGame()" id="stopBtn">Stop</button>
+      <button onclick="useHint()">Hint</button>
+      <button onclick="toggleTheme()">Theme</button>
+      <button id="multiplayerToggle" onclick="toggleMultiplayer()">Enable Multiplayer</button>
+    </div>
+
+    <div class="game-board-container">
+      <canvas id="gameBoard" tabindex="0"></canvas>
+      <canvas id="particleCanvas" class="particle-canvas"></canvas>
+    </div>
+    
+    <div class="status" id="gameStatus">Tap a cell to start!</div>
+    
+    <div class="instructions">
+      <p>Tap to reveal • Long press to flag • Mobile optimized</p>
+      <p>Arrow keys + Space/F for keyboard play</p>
+    </div>
+  </div>
+
+  <div class="modal" id="gameOverModal">
+    <div class="modal-content">
+      <h2 id="gameOverTitle">Game Over!</h2>
+      <div id="gameOverStats"></div>
+      <button onclick="closeModal(); newGame();">Play Again</button>
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+  const CONFIGS = {
+    easy: { rows: 8, cols: 8, mines: 10, cellSize: 40 },
+    medium: { rows: 16, cols: 16, mines: 40, cellSize: 25 },
+    hard: { rows: 16, cols: 30, mines: 99, cellSize: 20 }
+  };
+
+  class ParticleSystem {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.particles = [];
+      this.animationId = null;
+    }
+
+    resize(width, height) {
+      this.canvas.width = width; this.canvas.height = height;
+    }
+
+    createParticle(x, y, type, color = '#ff6b6b') {
+      const particle = {
+        x, y,
+        vx: (Math.random() - 0.5) * 12,
+        vy: (Math.random() - 0.5) * 12,
+        life: 1.0,
+        decay: Math.random() * 0.015 + 0.008,
+        size: Math.random() * 6 + 3,
+        color,
+        type,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.3,
+        gravity: 0.4,
+        bounce: 0.7,
+        trail: []
+      };
+
+      if (type === 'explosion') {
+        particle.vx *= 2.5;
+        particle.vy *= 2.5;
+        particle.size *= 2;
+        particle.gravity = 0.6;
+        particle.color = ['#ff4444', '#ff6666', '#ff8888', '#ffaa00'][Math.floor(Math.random() * 4)];
+      } else if (type === 'celebration') {
+        particle.vy = Math.random() * -12 - 4;
+        particle.vx = (Math.random() - 0.5) * 10;
+        particle.color = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#ff69b4', '#00ff41'][Math.floor(Math.random() * 6)];
+        particle.size *= 1.5;
+        particle.gravity = 0.3;
+      } else if (type === 'flag') {
+        particle.size = Math.random() * 4 + 2;
+        particle.color = ['#ff0000', '#ff4444', '#ff6666'][Math.floor(Math.random() * 3)];
+        particle.decay = 0.08;
+        particle.gravity = 0.2;
+      } else if (type === 'reveal') {
+        particle.size = Math.random() * 3 + 1;
+        particle.color = ['#4CAF50', '#45a049', '#66bb6a'][Math.floor(Math.random() * 3)];
+        particle.decay = 0.06; particle.vx *= 0.5; particle.vy *= 0.5;
+      }
+
+      this.particles.push(particle);
+    }
+
+    explode(x, y) {
+      for (let i = 0; i < 25; i++) this.createParticle(x, y, 'explosion');
+      this.startAnimation();
+    }
+
+    celebrate(x, y) {
+      for (let i = 0; i < 40; i++) {
+        this.createParticle(x, y, 'celebration');
+      }
+      this.startAnimation();
+    }
+
+    flagEffect(x, y) {
+      for (let i = 0; i < 12; i++) {
+        this.createParticle(x, y, 'flag');
+      }
+      this.startAnimation();
+    }
+
+    revealEffect(x, y) {
+      for (let i = 0; i < 6; i++) this.createParticle(x, y, 'reveal');
+      this.startAnimation();
+    }
+
+    update() {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        
+        p.trail.push({ x: p.x, y: p.y, life: p.life * 0.5 });
+        if (p.trail.length > 5) p.trail.shift();
+        
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.rotation += p.rotationSpeed;
+        p.life -= p.decay;
+        
+        if (p.y > this.canvas.height && p.vy > 0) {
+          p.vy *= -p.bounce;
+          p.vx *= 0.8;
+          p.y = this.canvas.height;
+        }
+        
+        if (p.x < 0 || p.x > this.canvas.width) {
+          p.vx *= -p.bounce;
+        }
+
+        if (p.life <= 0) {
+          this.particles.splice(i, 1);
+          continue;
+        }
+
+        this.ctx.save();
+        
+        for (let j = 0; j < p.trail.length; j++) {
+          const t = p.trail[j];
+          this.ctx.globalAlpha = t.life * 0.3;
+          this.ctx.fillStyle = p.color;
+          this.ctx.beginPath();
+          this.ctx.arc(t.x, t.y, p.size * 0.5, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+        
+        this.ctx.globalAlpha = p.life;
+        this.ctx.fillStyle = p.color;
+        this.ctx.translate(p.x, p.y);
+        this.ctx.rotate(p.rotation);
+        
+        if (p.type === 'explosion') {
+          this.ctx.shadowBlur = 10;
+          this.ctx.shadowColor = p.color;
+        }
+        
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        if (p.type === 'celebration') {
+          this.ctx.strokeStyle = '#ffffff';
+          this.ctx.lineWidth = 1;
+          this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
+      }
+
+      if (this.particles.length > 0) {
+        this.animationId = requestAnimationFrame(() => this.update());
+      } else {
+        this.stopAnimation();
+      }
+    }
+
+    startAnimation() {
+      if (!this.animationId) this.update();
+    }
+
+    stopAnimation() {
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId); this.animationId = null;
+      }
+    }
+  }
+
+  class WalletManager {
+    constructor() {
+      this.wallet = null;
+      this.connected = false;
+      this.publicKey = null;
+      this.connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+      this.loadWalletState();
+    }
+
+    async detectWallet() {
+      if (window.solana && window.solana.isPhantom) {
+        return 'phantom';
+      }
+      if (window.solflare && window.solflare.isSolflare) {
+        return 'solflare';
+      }
+      return null;
+    }
+
+    async connectWallet() {
+      try {
+        const walletType = await this.detectWallet();
+        
+        if (!walletType) {
+          throw new Error('No Nosana wallet detected. Please install Phantom or Solflare.');
+        }
+
+        let wallet;
+        if (walletType === 'phantom') {
+          wallet = window.solana;
+        } else if (walletType === 'solflare') {
+          wallet = window.solflare;
+        }
+
+        const response = await wallet.connect();
+        this.wallet = wallet;
+        this.connected = true;
+        this.publicKey = response.publicKey.toString();
+        
+        this.saveWalletState();
+        this.updateUI();
+        
+        return true;
+      } catch (error) {
+        console.error('Wallet connection failed:', error);
+        this.updateStatus('Connection failed: ' + error.message);
+        return false;
+      }
+    }
+
+    async disconnectWallet() {
+      try {
+        if (this.wallet && this.wallet.disconnect) {
+          await this.wallet.disconnect();
+        }
+        this.wallet = null;
+        this.connected = false;
+        this.publicKey = null;
+        
+        this.clearWalletState();
+        this.updateUI();
+        
+        return true;
+      } catch (error) {
+        console.error('Wallet disconnection failed:', error);
+        return false;
+      }
+    }
+
+    saveWalletState() {
+      if (this.connected && this.publicKey) {
+        localStorage.setItem('nosana-wallet-connected', 'true');
+        localStorage.setItem('nosana-wallet-publickey', this.publicKey);
+      }
+    }
+
+    loadWalletState() {
+      const wasConnected = localStorage.getItem('nosana-wallet-connected') === 'true';
+      const savedPublicKey = localStorage.getItem('nosana-wallet-publickey');
+      
+      if (wasConnected && savedPublicKey) {
+        setTimeout(() => this.attemptReconnect(), 1000);
+      }
+    }
+
+    async attemptReconnect() {
+      try {
+        const walletType = await this.detectWallet();
+        if (walletType) {
+          let wallet = walletType === 'phantom' ? window.solana : window.solflare;
+          if (wallet && wallet.isConnected) {
+            this.wallet = wallet;
+            this.connected = true;
+            this.publicKey = wallet.publicKey.toString();
+            this.updateUI();
+          }
+        }
+      } catch (error) {
+        console.log('Auto-reconnect failed:', error);
+        this.clearWalletState();
+      }
+    }
+
+    clearWalletState() {
+      localStorage.removeItem('nosana-wallet-connected');
+      localStorage.removeItem('nosana-wallet-publickey');
+    }
+
+    updateUI() {
+      const statusEl = document.getElementById('walletStatus');
+      const addressEl = document.getElementById('walletAddress');
+      const buttonEl = document.getElementById('walletButton');
+
+      if (this.connected && this.publicKey) {
+        statusEl.textContent = 'Wallet: Connected';
+        addressEl.textContent = this.publicKey.slice(0, 4) + '...' + this.publicKey.slice(-4);
+        addressEl.style.display = 'block';
+        buttonEl.textContent = 'Disconnect';
+        buttonEl.disabled = false;
+      } else {
+        statusEl.textContent = 'Wallet: Not Connected';
+        addressEl.style.display = 'none';
+        buttonEl.textContent = 'Connect Wallet';
+        buttonEl.disabled = false;
+      }
+    }
+
+    updateStatus(message) {
+      const statusEl = document.getElementById('walletStatus');
+      statusEl.textContent = message;
+      setTimeout(() => this.updateUI(), 3000);
+    }
+  }
+
+  class Game {
+    constructor() {
+      this.difficulty = 'easy';
+      this.board = [];
+      this.revealed = [];
+      this.flagged = [];
+      this.gameOver = false;
+      this.gameWon = false;
+      this.gameStarted = false;
+      this.firstClick = true;
+      this.paused = false;
+      this.startTime = 0;
+      this.timerInterval = null;
+      this.focusedCell = { row: 0, col: 0 };
+      this.gamesWon = parseInt(localStorage.getItem('minesweeper-wins') || '0');
+      this.currentTheme = localStorage.getItem('minesweeper-theme') || 'default';
+      
+      this.canvas = document.getElementById('gameBoard');
+      this.ctx = this.canvas.getContext('2d');
+      
+      this.particleCanvas = document.getElementById('particleCanvas');
+      this.particleSystem = new ParticleSystem(this.particleCanvas);
+      
+      // Touch handling
+      this.touchStartTime = 0;
+      this.touchStartPos = null;
+      this.longPressTimer = null;
+      this.longPressThreshold = 500;
+      
+      this.init();
+    }
+
+    init() {
+      this.setupEvents();
+      this.newGame();
+      this.updateStats();
+      document.body.setAttribute('data-theme', this.currentTheme);
+    }
+
+    setupEvents() {
+      // Canvas events
+      this.canvas.addEventListener('click', (e) => this.handleClick(e));
+      this.canvas.addEventListener('contextmenu', (e) => this.handleRightClick(e));
+      this.canvas.addEventListener('mousedown', (e) => this.handleMiddleClick(e));
+
+      // Mobile touch events
+      this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+      this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
+      this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+
+      // Keyboard navigation
+      this.canvas.addEventListener('keydown', (e) => {
+        if (!this.gameStarted || this.gameOver || this.gameWon || this.paused) return;
+
+        const { row, col } = this.focusedCell;
+        let newRow = row, newCol = col;
+
+        switch (e.key) {
+          case 'ArrowUp': newRow = Math.max(0, row - 1); e.preventDefault(); break;
+          case 'ArrowDown': newRow = Math.min(this.rows - 1, row + 1); e.preventDefault(); break;
+          case 'ArrowLeft': newCol = Math.max(0, col - 1); e.preventDefault(); break;
+          case 'ArrowRight': newCol = Math.min(this.cols - 1, col + 1); e.preventDefault(); break;
+          case ' ':
+          case 'Enter':
+            this.revealCell(row, col);
+            e.preventDefault();
+            break;
+          case 'f':
+          case 'F':
+            this.toggleFlag(row, col);
+            e.preventDefault();
+            break;
+        }
+
+        if (newRow !== row || newCol !== col) {
+          this.focusedCell = { row: newRow, col: newCol };
+          this.draw();
+        }
+      });
+    }
+
+    handleTouchStart(e) {
+      e.preventDefault();
+      if (this.gameOver || this.gameWon || this.paused) return;
+
+      const touch = e.touches[0];
+      this.touchStartTime = Date.now();
+      this.touchStartPos = this.getCellFromTouch(touch);
+
+      this.longPressTimer = setTimeout(() => {
+        if (this.touchStartPos) {
+          this.toggleFlag(this.touchStartPos.row, this.touchStartPos.col);
+          this.touchStartPos = null;
+          
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+        }
+      }, this.longPressThreshold);
+    }
+
+    handleTouchMove(e) {
+      e.preventDefault();
+      
+      if (this.touchStartPos && e.touches[0]) {
+        const currentPos = this.getCellFromTouch(e.touches[0]);
+        if (currentPos.row !== this.touchStartPos.row || currentPos.col !== this.touchStartPos.col) {
+          clearTimeout(this.longPressTimer);
+          this.touchStartPos = null;
+        }
+      }
+    }
+
+    handleTouchEnd(e) {
+      e.preventDefault();
+      clearTimeout(this.longPressTimer);
+
+      if (this.touchStartPos && Date.now() - this.touchStartTime < this.longPressThreshold) {
+        this.revealCell(this.touchStartPos.row, this.touchStartPos.col);
+      }
+
+      this.touchStartPos = null;
+    }
+
+    getCellFromTouch(touch) {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      const col = Math.floor(x / this.cellSize);
+      const row = Math.floor(y / this.cellSize);
+      return { 
+        row: Math.max(0, Math.min(row, this.rows - 1)), 
+        col: Math.max(0, Math.min(col, this.cols - 1)) 
+      };
+    }
+
+    newGame() {
+      const config = CONFIGS[this.difficulty];
+      this.rows = config.rows;
+      this.cols = config.cols;
+      this.numMines = config.mines;
+      this.cellSize = config.cellSize;
+
+      this.canvas.width = this.cols * this.cellSize;
+      this.canvas.height = this.rows * this.cellSize;
+      this.particleSystem.resize(this.cols * this.cellSize, this.rows * this.cellSize);
+
+      this.board = Array(this.rows).fill().map(() => Array(this.cols).fill(0));
+      this.revealed = Array(this.rows).fill().map(() => Array(this.cols).fill(false));
+      this.flagged = Array(this.rows).fill().map(() => Array(this.cols).fill(false));
+
+      this.gameOver = false;
+      this.gameWon = false;
+      this.gameStarted = false;
+      this.firstClick = true;
+      this.paused = false;
+      this.focusedCell = { row: 0, col: 0 };
+
+      clearInterval(this.timerInterval);
+      document.getElementById('timer').textContent = '0';
+      document.getElementById('mineCounter').textContent = this.numMines;
+      document.getElementById('gameStatus').textContent = 'Tap a cell to start!';
+      document.getElementById('gameStatus').style.color = 'var(--text-color)';
+      document.getElementById('stopBtn').textContent = 'Stop';
+      document.getElementById('stopBtn').disabled = false;
+      document.getElementById('stopBtn').onclick = stopGame;
+
+      this.draw();
+      this.canvas.focus();
+    }
+
+    placeMines(avoidRow, avoidCol) {
+      let minesPlaced = 0;
+      while (minesPlaced < this.numMines) {
+        const row = Math.floor(Math.random() * this.rows);
+        const col = Math.floor(Math.random() * this.cols);
+
+        if (Math.abs(row - avoidRow) <= 1 && Math.abs(col - avoidCol) <= 1) continue;
+        if (this.board[row][col] === 'M') continue;
+
+        this.board[row][col] = 'M';
+        minesPlaced++;
+
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const newRow = row + dr;
+            const newCol = col + dc;
+            if (this.isValid(newRow, newCol) && this.board[newRow][newCol] !== 'M') {
+              this.board[newRow][newCol]++;
+            }
+          }
+        }
+      }
+    }
+
+    isValid(row, col) { return row >= 0 && row < this.rows && col >= 0 && col < this.cols; }
+
+    startTimer() {
+      if (!this.gameStarted) {
+        this.gameStarted = true;
+        this.startTime = Date.now();
+        
+        this.timerInterval = setInterval(() => {
+          if (!this.gameOver && !this.gameWon) {
+            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed;
+          }
+        }, 1000);
+      }
+    }
+
+    handleClick(e) {
+      if (this.gameOver || this.gameWon || this.paused) return;
+      const { row, col } = this.getCellFromEvent(e);
+      this.revealCell(row, col);
+    }
+
+    handleRightClick(e) {
+      e.preventDefault();
+      if (this.gameOver || this.gameWon || this.paused) return;
+      const { row, col } = this.getCellFromEvent(e);
+      this.toggleFlag(row, col);
+    }
+
+    handleMiddleClick(e) {
+      if (e.button === 1) {
+        e.preventDefault();
+        if (this.gameOver || this.gameWon || this.paused) return;
+        const { row, col } = this.getCellFromEvent(e);
+        this.chordReveal(row, col);
+      }
+    }
+
+    getCellFromEvent(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const col = Math.floor(x / this.cellSize);
+      const row = Math.floor(y / this.cellSize);
+      return { 
+        row: Math.max(0, Math.min(row, this.rows - 1)), 
+        col: Math.max(0, Math.min(col, this.cols - 1)) 
+      };
+    }
+
+    revealCell(row, col) {
+      if (!this.isValid(row, col) || this.revealed[row][col] || this.flagged[row][col]) return;
+
+      if (this.firstClick) {
+        this.firstClick = false;
+        this.placeMines(row, col);
+        this.startTimer();
+      }
+
+      this.revealed[row][col] = true;
+
+      if (this.board[row][col] === 'M') {
+        this.gameOver = true;
+        document.getElementById('gameStatus').textContent = '💥 Game Over!';
+        document.getElementById('gameStatus').style.color = '#ff4444';
+        clearInterval(this.timerInterval);
+        
+        const x = col * this.cellSize + this.cellSize / 2;
+        const y = row * this.cellSize + this.cellSize / 2;
+        this.particleSystem.explode(x, y);
+        
+        this.revealAllMines();
+        this.showGameOverModal(false);
+        return;
+      }
+
+      if (this.board[row][col] === 0) {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            this.revealCell(row + dr, col + dc);
+          }
+        }
+      }
+
+      this.checkWin();
+      this.draw();
+    }
+
+    toggleFlag(row, col) {
+      if (!this.isValid(row, col) || this.revealed[row][col] || this.firstClick) return;
+
+      this.flagged[row][col] = !this.flagged[row][col];
+      
+      if (this.flagged[row][col]) {
+        const x = col * this.cellSize + this.cellSize / 2;
+        const y = row * this.cellSize + this.cellSize / 2;
+        this.particleSystem.flagEffect(x, y);
+      }
+      
+      this.updateMineCounter();
+      this.checkWin();
+      this.draw();
+    }
+
+    chordReveal(row, col) {
+      if (!this.isValid(row, col) || !this.revealed[row][col]) return;
+
+      const cellValue = this.board[row][col];
+      if (cellValue === 'M' || cellValue === 0) return;
+
+      let flagCount = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const newRow = row + dr;
+          const newCol = col + dc;
+          if (this.isValid(newRow, newCol) && this.flagged[newRow][newCol]) {
+            flagCount++;
+          }
+        }
+      }
+
+      if (flagCount === cellValue) {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const newRow = row + dr;
+            const newCol = col + dc;
+            if (this.isValid(newRow, newCol) && !this.flagged[newRow][newCol]) {
+              this.revealCell(newRow, newCol);
+            }
+          }
+        }
+      }
+    }
+
+    revealAllMines() {
+      for (let row = 0; row < this.rows; row++) {
+        for (let col = 0; col < this.cols; col++) {
+          if (this.board[row][col] === 'M') {
+            this.revealed[row][col] = true;
+          }
+        }
+      }
+      this.draw();
+    }
+
+    updateMineCounter() {
+      const flaggedCount = this.flagged.flat().filter(f => f).length;
+      document.getElementById('mineCounter').textContent = this.numMines - flaggedCount;
+    }
+
+    checkWin() {
+      let revealedCount = 0;
+      let correctFlags = 0;
+
+      for (let row = 0; row < this.rows; row++) {
+        for (let col = 0; col < this.cols; col++) {
+          if (this.revealed[row][col]) revealedCount++;
+          if (this.flagged[row][col] && this.board[row][col] === 'M') {
+            correctFlags++;
+          }
+        }
+      }
+
+      if (revealedCount === (this.rows * this.cols - this.numMines) || correctFlags === this.numMines) {
+        this.gameWon = true;
+        document.getElementById('gameStatus').textContent = '🎉 You Won!';
+        document.getElementById('gameStatus').style.color = '#4CAF50';
+        clearInterval(this.timerInterval);
+        
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        this.particleSystem.celebrate(centerX, centerY);
+        
+        this.gamesWon++;
+        localStorage.setItem('minesweeper-wins', this.gamesWon.toString());
+        this.updateStats();
+        this.showGameOverModal(true);
+      }
+    }
+
+    showGameOverModal(won) {
+      const modal = document.getElementById('gameOverModal');
+      const title = document.getElementById('gameOverTitle');
+      const stats = document.getElementById('gameOverStats');
+
+      title.textContent = won ? '🎉 Congratulations!' : '💥 Game Over!';
+      
+      const time = Math.floor((Date.now() - this.startTime) / 1000);
+      
+      stats.innerHTML = `
+        <p><strong>Time:</strong> ${time}s</p>
+        <p><strong>Total Wins:</strong> ${this.gamesWon}</p>
+      `;
+
+      modal.style.display = 'flex';
+
+      if (won) {
+        const container = document.querySelector('.game-container');
+        container.classList.add('win-animation');
+        setTimeout(() => container.classList.remove('win-animation'), 600);
+      } else {
+        const container = document.querySelector('.game-container');
+        container.classList.add('game-over-animation');
+        setTimeout(() => container.classList.remove('game-over-animation'), 500);
+      }
+    }
+
+    updateStats() { document.getElementById('gamesWon').textContent = this.gamesWon; }
+
+    useHint() {
+      if (!this.gameStarted || this.gameOver || this.gameWon || this.paused) return;
+      
+      const safeCells = [];
+      for (let row = 0; row < this.rows; row++) {
+        for (let col = 0; col < this.cols; col++) {
+          if (!this.revealed[row][col] && !this.flagged[row][col] && this.board[row][col] !== 'M') {
+            safeCells.push({ row, col });
+          }
+        }
+      }
+
+      if (safeCells.length > 0) {
+        const hint = safeCells[Math.floor(Math.random() * safeCells.length)];
+        this.revealCell(hint.row, hint.col);
+        document.getElementById('gameStatus').textContent = 'Hint used!';
+      } else {
+        document.getElementById('gameStatus').textContent = 'No safe cells available!';
+      }
+    }
+
+    draw() {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+      for (let row = 0; row < this.rows; row++) {
+        for (let col = 0; col < this.cols; col++) {
+          this.drawCell(row, col);
+        }
+      }
+
+      if (this.focusedCell) {
+        const x = this.focusedCell.col * this.cellSize;
+        const y = this.focusedCell.row * this.cellSize;
+        
+        this.ctx.strokeStyle = '#4CAF50';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(x + 1, y + 1, this.cellSize - 2, this.cellSize - 2);
+      }
+    }
+
+    drawCell(row, col) {
+      const x = col * this.cellSize;
+      const y = row * this.cellSize;
+
+      if (this.revealed[row][col]) {
+        if (this.board[row][col] === 'M') {
+          this.ctx.fillStyle = this.gameOver ? '#ff4444' : '#ff6666';
+        } else {
+          this.ctx.fillStyle = '#e0e0e0';
+        }
+      } else {
+        this.ctx.fillStyle = this.flagged[row][col] ? '#ffaa00' : '#999';
+      }
+
+      this.ctx.fillRect(x, y, this.cellSize, this.cellSize);
+
+      this.ctx.strokeStyle = '#666';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(x, y, this.cellSize, this.cellSize);
+
+      if (this.flagged[row][col] && !this.revealed[row][col]) {
+        this.ctx.fillStyle = 'red';
+        this.ctx.font = `${this.cellSize * 0.6}px sans-serif`;
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('🚩', x + this.cellSize/2, y + this.cellSize*0.7);
+      } else if (this.revealed[row][col]) {
+        const val = this.board[row][col];
+        if (val === 'M') {
+          this.ctx.fillStyle = 'black';
+          this.ctx.beginPath();
+          this.ctx.arc(x + this.cellSize/2, y + this.cellSize/2, this.cellSize/4, 0, 2 * Math.PI);
+          this.ctx.fill();
+        } else if (val > 0) {
+          const colors = ['', '#0000ff', '#008000', '#ff0000', '#800080', '#800000', '#008080', '#000000', '#808080'];
+          this.ctx.fillStyle = colors[val] || '#000000';
+          this.ctx.font = `bold ${this.cellSize * 0.6}px sans-serif`;
+          this.ctx.textAlign = 'center';
+          this.ctx.fillText(val, x + this.cellSize/2, y + this.cellSize*0.7);
+        }
+      }
+    }
+  }
+
+  let game;
+  let walletManager;
+  let multiplayerManager;
+  let playerProgress;
+
+  class PlayerProgress {
+    constructor() {
+      this.gamesWon = parseInt(localStorage.getItem('minesweeper-wins') || '15');
+      this.totalGamesPlayed = parseInt(localStorage.getItem('minesweeper-total-games') || '20');
+      this.currentLevel = Math.floor(this.gamesWon / 3);
+      this.totalSOLInvested = parseFloat(localStorage.getItem('minesweeper-sol-invested') || '0.075');
+      this.unlockedRoomTypes = this.calculateUnlockedRooms();
+      this.achievements = JSON.parse(localStorage.getItem('minesweeper-achievements') || '[]');
+    }
+
+    calculateUnlockedRooms() {
+      const unlocked = ['starter'];
+      if (this.gamesWon >= 5) unlocked.push('advanced');
+      if (this.gamesWon >= 15) unlocked.push('expert');
+      return unlocked;
+    }
+
+    addWin() {
+      this.gamesWon++;
+      this.totalGamesPlayed++;
+      const oldLevel = this.currentLevel;
+      this.currentLevel = Math.floor(this.gamesWon / 3);
+      
+      localStorage.setItem('minesweeper-wins', this.gamesWon.toString());
+      localStorage.setItem('minesweeper-total-games', this.totalGamesPlayed.toString());
+      
+      const oldUnlocked = [...this.unlockedRoomTypes];
+      this.unlockedRoomTypes = this.calculateUnlockedRooms();
+      
+      const newlyUnlocked = this.unlockedRoomTypes.filter(room => !oldUnlocked.includes(room));
+      if (newlyUnlocked.length > 0) {
+        this.showUnlockNotification(newlyUnlocked);
+      }
+      
+      if (this.currentLevel > oldLevel) {
+        this.showLevelUpNotification(this.currentLevel);
+      }
+    }
+
+    addGamePlayed() {
+      this.totalGamesPlayed++;
+      localStorage.setItem('minesweeper-total-games', this.totalGamesPlayed.toString());
+    }
+
+    addSOLInvestment(amount) {
+      this.totalSOLInvested += amount;
+      localStorage.setItem('minesweeper-sol-invested', this.totalSOLInvested.toFixed(6));
+    }
+
+    showUnlockNotification(newRooms) {
+      const roomNames = {
+        'advanced': '3-Player Rooms',
+        'expert': '4-Player Rooms'
+      };
+      
+      const unlockedNames = newRooms.map(room => roomNames[room]).join(', ');
+      alert(`🎉 CONGRATULATIONS! 🎉\n\nYou've unlocked: ${unlockedNames}!\n\nYour Progress:\n• Level: ${this.currentLevel}\n• Games Won: ${this.gamesWon}\n• Total SOL Invested: ${this.totalSOLInvested.toFixed(4)}\n\nCheck out the new room types in multiplayer!`);
+    }
+
+    showLevelUpNotification(level) {
+      alert(`🚀 LEVEL UP! 🚀\n\nYou are now Level ${level}!\n\nKeep playing to unlock more room types and features.`);
+    }
+
+    canAccessRoomType(roomType) {
+      return this.unlockedRoomTypes.includes(roomType);
+    }
+
+    getProgressInfo() {
+      return {
+        level: this.currentLevel,
+        gamesWon: this.gamesWon,
+        totalGames: this.totalGamesPlayed,
+        solInvested: this.totalSOLInvested,
+        unlockedRooms: this.unlockedRoomTypes,
+        nextUnlock: this.getNextUnlockInfo()
+      };
+    }
+
+    getNextUnlockInfo() {
+      if (!this.unlockedRoomTypes.includes('advanced')) {
+        return { type: 'advanced', requirement: '5 wins', current: this.gamesWon, needed: 5 };
+      } else if (!this.unlockedRoomTypes.includes('expert')) {
+        return { type: 'expert', requirement: '15 wins', current: this.gamesWon, needed: 15 };
+      }
+      return null;
+    }
+  }
+
+  class GameRoom {
+    constructor(roomType = 'starter') {
+      this.roomId = this.generateRoomId();
+      this.roomType = roomType;
+      this.players = [];
+      this.gameState = 'waiting';
+      this.totalPot = 0;
+      this.playerInvestments = {};
+      this.playerMoves = {};
+      this.currentPlayer = null;
+      this.winner = null;
+      this.runnerUp = null;
+      this.turnOrder = [];
+      this.currentTurnIndex = 0;
+      
+      this.roomConfigs = {
+        'starter': { 
+          maxPlayers: 2, 
+          entryFee: 0.0031, 
+          moveCost: 0.0025, 
+          winnerPercentage: 0.04,
+          runnerUpPercentage: 0.00,
+          displayName: '2-Player Starter',
+          description: 'Perfect for beginners'
+        },
+        'advanced': { 
+          maxPlayers: 3, 
+          entryFee: 0.005, 
+          moveCost: 0.003, 
+          winnerPercentage: 0.05,
+          runnerUpPercentage: 0.00,
+          displayName: '3-Player Advanced',
+          description: 'Unlocked at 5 wins'
+        },
+        'expert': { 
+          maxPlayers: 4, 
+          entryFee: 0.008, 
+          moveCost: 0.004, 
+          winnerPercentage: 0.06,
+          runnerUpPercentage: 0.00,
+          displayName: '4-Player Expert',
+          description: 'Unlocked at 15 wins'
+        }
+      };
+      
+      this.config = this.roomConfigs[roomType];
+      if (!this.config) {
+        throw new Error(`Invalid room type: ${roomType}`);
+      }
+    }
+
+    generateRoomId() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    addPlayer(publicKey) {
+      if (this.players.length >= this.config.maxPlayers) {
+        throw new Error(`Room is full (${this.config.maxPlayers} players max)`);
+      }
+      
+      if (this.players.includes(publicKey)) {
+        throw new Error('Player already in room');
+      }
+      
+      this.players.push(publicKey);
+      this.playerInvestments[publicKey] = 0;
+      this.playerMoves[publicKey] = 0;
+      
+      if (this.players.length === this.config.maxPlayers) {
+        this.gameState = 'ready';
+        this.turnOrder = [...this.players];
+      }
+      
+      return this;
+    }
+
+    async startGame(walletManager) {
+      if (this.gameState !== 'ready') {
+        throw new Error('Room not ready to start');
+      }
+      
+      for (const player of this.players) {
+        if (player === walletManager.publicKey) {
+          const balance = await walletManager.getBalance();
+          if (balance < this.config.entryFee) {
+            throw new Error(`Insufficient balance for entry fee. Need ${this.config.entryFee} SOL`);
+          }
+          
+          this.totalPot += this.config.entryFee;
+          this.playerInvestments[player] += this.config.entryFee;
+          
+          if (playerProgress) {
+            playerProgress.addSOLInvestment(this.config.entryFee);
+          }
+        } else {
+          this.totalPot += this.config.entryFee;
+          this.playerInvestments[player] += this.config.entryFee;
+        }
+      }
+      
+      this.gameState = 'playing';
+      this.currentPlayer = this.turnOrder[0];
+      this.currentTurnIndex = 0;
+      return this;
+    }
+
+    async makeMove(walletManager) {
+      if (this.gameState !== 'playing') {
+        throw new Error('Game not in progress');
+      }
+      
+      if (this.currentPlayer !== walletManager.publicKey) {
+        throw new Error('Not your turn');
+      }
+      
+      const balance = await walletManager.getBalance();
+      if (balance < this.config.moveCost) {
+        throw new Error(`Insufficient balance for move. Need ${this.config.moveCost} SOL`);
+      }
+      
+      this.totalPot += this.config.moveCost;
+      this.playerInvestments[walletManager.publicKey] += this.config.moveCost;
+      this.playerMoves[walletManager.publicKey] += 1;
+      
+      if (playerProgress) {
+        playerProgress.addSOLInvestment(this.config.moveCost);
+      }
+      
+      this.currentTurnIndex = (this.currentTurnIndex + 1) % this.turnOrder.length;
+      this.currentPlayer = this.turnOrder[this.currentTurnIndex];
+      
+      return this;
+    }
+
+    finishGame(winner, runnerUp = null) {
+      this.gameState = 'finished';
+      this.winner = winner;
+      this.runnerUp = runnerUp;
+      
+      if (winner) {
+        const winnerPayout = this.totalPot * this.config.winnerPercentage;
+        console.log(`🏆 Winner ${winner.slice(0,4)}...${winner.slice(-4)} receives ${winnerPayout.toFixed(4)} SOL (${(this.config.winnerPercentage * 100).toFixed(1)}% of ${this.totalPot.toFixed(4)} SOL pot)`);
+        
+        if (runnerUp && this.config.runnerUpPercentage > 0) {
+          const runnerUpPayout = this.totalPot * this.config.runnerUpPercentage;
+          console.log(`🥈 Runner-up ${runnerUp.slice(0,4)}...${runnerUp.slice(-4)} receives ${runnerUpPayout.toFixed(4)} SOL (${(this.config.runnerUpPercentage * 100).toFixed(1)}% of pot)`);
+        }
+        
+        if (winner === walletManager?.publicKey && playerProgress) {
+          playerProgress.addWin();
+        } else if (playerProgress) {
+          playerProgress.addGamePlayed();
+        }
+      }
+      
+      return this;
+    }
+  }
+
+  class MultiplayerManager {
+    constructor(walletManager) {
+      this.walletManager = walletManager;
+      this.currentRoom = null;
+    }
+
+    createRoom(roomType = 'starter') {
+      if (!this.walletManager.connected) {
+        throw new Error('Wallet not connected');
+      }
+      
+      if (!playerProgress.canAccessRoomType(roomType)) {
+        const roomConfig = new GameRoom(roomType).config;
+        throw new Error(`Room type "${roomConfig.displayName}" is locked. ${roomConfig.description}`);
+      }
+      
+      this.currentRoom = new GameRoom(roomType);
+      this.currentRoom.addPlayer(this.walletManager.publicKey);
+      
+      return this.currentRoom;
+    }
+
+    joinRoom(roomId, roomType = 'starter') {
+      if (!this.walletManager.connected) {
+        throw new Error('Wallet not connected');
+      }
+      
+      if (!playerProgress.canAccessRoomType(roomType)) {
+        const roomConfig = new GameRoom(roomType).config;
+        throw new Error(`Room type "${roomConfig.displayName}" is locked. ${roomConfig.description}`);
+      }
+      
+      if (!this.currentRoom || this.currentRoom.roomId !== roomId) {
+        this.currentRoom = new GameRoom(roomType);
+        this.currentRoom.roomId = roomId;
+        
+        // Add dummy players to simulate room with existing players
+        const maxPlayers = this.currentRoom.config.maxPlayers;
+        for (let i = 1; i < maxPlayers; i++) {
+          this.currentRoom.addPlayer(`DUMMY_PLAYER_${i}`);
+        }
+      }
+      
+      this.currentRoom.addPlayer(this.walletManager.publicKey);
+      
+      return this.currentRoom;
+    }
+
+    async startMultiplayerGame() {
+      if (!this.currentRoom) {
+        throw new Error('No active room');
+      }
+      
+      await this.currentRoom.startGame(this.walletManager);
+      return this.currentRoom;
+    }
+
+    async makeMove() {
+      if (!this.currentRoom) {
+        throw new Error('No active room');
+      }
+      
+      await this.currentRoom.makeMove(this.walletManager);
+      return this.currentRoom;
+    }
+
+    finishGame(winner) {
+      if (!this.currentRoom) {
+        throw new Error('No active room');
+      }
+      
+      this.currentRoom.finishGame(winner);
+      return this.currentRoom;
+    }
+
+    leaveRoom() {
+      this.currentRoom = null;
+    }
+  }
+
+  async function toggleWallet() {
+    const button = document.getElementById('walletButton');
+    button.disabled = true;
+    
+    try {
+      if (walletManager.connected) {
+        await walletManager.disconnectWallet();
+      } else {
+        await walletManager.connectWallet();
+      }
+    } catch (error) {
+      console.error('Wallet toggle failed:', error);
+      walletManager.updateStatus('Error: ' + error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  let selectedRoomType = 'starter';
+
+  function selectRoomType(roomType) {
+    selectedRoomType = roomType;
+    updateRoomTypeUI();
+  }
+
+  function updateRoomTypeUI() {
+    const buttons = ['starterRoomBtn', 'advancedRoomBtn', 'expertRoomBtn'];
+    const roomTypes = ['starter', 'advanced', 'expert'];
+    
+    buttons.forEach((btnId, index) => {
+      const btn = document.getElementById(btnId);
+      const roomType = roomTypes[index];
+      const canAccess = playerProgress.canAccessRoomType(roomType);
+      
+      btn.classList.remove('selected', 'locked');
+      btn.disabled = !canAccess;
+      
+      if (!canAccess) {
+        btn.classList.add('locked');
+      }
+      
+      if (roomType === selectedRoomType && canAccess) {
+        btn.classList.add('selected');
+      }
+    });
+    
+    updateBettingRulesDisplay();
+  }
+
+  function updateBettingRulesDisplay() {
+    const roomConfig = new GameRoom(selectedRoomType).config;
+    const entryFeeEl = document.querySelector('.entry-fee');
+    const moveCostEl = document.querySelector('.move-cost');
+    const winnerPayoutEl = document.querySelector('.winner-payout');
+    const playersEl = document.querySelector('.players-info');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    
+    if (entryFeeEl) entryFeeEl.textContent = `${roomConfig.entryFee} SOL`;
+    if (moveCostEl) moveCostEl.textContent = `${roomConfig.moveCost} SOL`;
+    if (winnerPayoutEl) winnerPayoutEl.textContent = `${(roomConfig.winnerPercentage * 100).toFixed(0)}%`;
+    if (playersEl) {
+      let playersText = `${roomConfig.displayName} rooms`;
+      if (roomConfig.runnerUpPercentage > 0) {
+        playersText += ` | Runner-up gets ${(roomConfig.runnerUpPercentage * 100).toFixed(0)}%`;
+      }
+      playersEl.textContent = playersText;
+    }
+    if (createRoomBtn) createRoomBtn.textContent = `🏠 Create Room (${roomConfig.entryFee} SOL)`;
+  }
+
+  function updatePlayerProgressUI() {
+    const progressEl = document.getElementById('playerProgress');
+    if (progressEl && playerProgress) {
+      const info = playerProgress.getProgressInfo();
+      const nextUnlock = info.nextUnlock;
+      
+      let progressText = `🏆 Level ${info.level} | ${info.gamesWon} Wins | ${info.solInvested.toFixed(4)} SOL Invested`;
+      
+      if (nextUnlock) {
+        const remaining = nextUnlock.needed - nextUnlock.current;
+        progressText += ` | Next: ${remaining} wins for ${nextUnlock.type}`;
+      } else {
+        progressText += ` | 🎯 All rooms unlocked!`;
+      }
+      
+      progressEl.textContent = progressText;
+    }
+  }
+
+  async function createRoom() {
+    if (!walletManager.connected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      const roomConfig = new GameRoom(selectedRoomType).config;
+      const balance = await walletManager.getBalance();
+      const minBalance = roomConfig.entryFee + roomConfig.moveCost * 10;
+      
+      if (balance < minBalance) {
+        alert(`Insufficient balance! You need at least ${minBalance.toFixed(4)} SOL to play.\nEntry fee: ${roomConfig.entryFee} SOL + estimated moves: ${(roomConfig.moveCost * 10).toFixed(4)} SOL\nCurrent balance: ${balance.toFixed(4)} SOL`);
+        return;
+      }
+
+      const room = multiplayerManager.createRoom(selectedRoomType);
+      updateMultiplayerUI();
+      alert(`${roomConfig.displayName} Room Created!\n\nRoom ID: ${room.roomId}\n\nGame Rules:\n• Entry Fee: ${roomConfig.entryFee} SOL\n• Move Cost: ${roomConfig.moveCost} SOL per action\n• Max Players: ${roomConfig.maxPlayers}\n• Winner gets ${(roomConfig.winnerPercentage * 100).toFixed(1)}% of total pot\n${roomConfig.runnerUpPercentage > 0 ? `• Runner-up gets ${(roomConfig.runnerUpPercentage * 100).toFixed(1)}% of total pot\n` : ''}\nWaiting for ${roomConfig.maxPlayers - 1} more player(s)...`);
+    } catch (error) {
+      alert('Failed to create room: ' + error.message);
+    }
+  }
+
+  async function joinRoom() {
+    if (!walletManager.connected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    const roomId = prompt('Enter Room ID:');
+    if (!roomId) return;
+
+    try {
+      const roomConfig = new GameRoom(selectedRoomType).config;
+      const balance = await walletManager.getBalance();
+      const minBalance = roomConfig.entryFee + roomConfig.moveCost * 10;
+      
+      if (balance < minBalance) {
+        alert(`Insufficient balance! You need at least ${minBalance.toFixed(4)} SOL to play.\nEntry fee: ${roomConfig.entryFee} SOL + estimated moves: ${(roomConfig.moveCost * 10).toFixed(4)} SOL\nCurrent balance: ${balance.toFixed(4)} SOL`);
+        return;
+      }
+
+      const room = multiplayerManager.joinRoom(roomId.toUpperCase(), selectedRoomType);
+      updateMultiplayerUI();
+      alert(`Joined ${roomConfig.displayName} Room!\n\nRoom ID: ${room.roomId}\n\nGame Rules:\n• Entry Fee: ${roomConfig.entryFee} SOL\n• Move Cost: ${roomConfig.moveCost} SOL per action\n• Max Players: ${roomConfig.maxPlayers}\n• Winner gets ${(roomConfig.winnerPercentage * 100).toFixed(1)}% of total pot\n${roomConfig.runnerUpPercentage > 0 ? `• Runner-up gets ${(roomConfig.runnerUpPercentage * 100).toFixed(1)}% of total pot\n` : ''}\nRoom is ready! Click "New Game" to start.`);
+    } catch (error) {
+      alert('Failed to join room: ' + error.message);
+    }
+  }
+
+  function toggleMultiplayer() {
+    const section = document.getElementById('multiplayerSection');
+    const toggle = document.getElementById('multiplayerToggle');
+    
+    if (section.style.display === 'none') {
+      section.style.display = 'block';
+      toggle.textContent = 'Disable Multiplayer';
+    } else {
+      section.style.display = 'none';
+      toggle.textContent = 'Enable Multiplayer';
+      if (multiplayerManager) {
+        multiplayerManager.leaveRoom();
+        updateMultiplayerUI();
+      }
+    }
+  }
+
+  function updateMultiplayerUI() {
+    const roomInfo = document.getElementById('roomInfo');
+    const potDisplay = document.getElementById('potDisplay');
+    const playerTurn = document.getElementById('playerTurn');
+    const moveCounter = document.getElementById('moveCounter');
+    
+    if (!multiplayerManager || !multiplayerManager.currentRoom) {
+      roomInfo.textContent = '🎮 Single Player Mode';
+      potDisplay.style.display = 'none';
+      playerTurn.style.display = 'none';
+      moveCounter.style.display = 'none';
+      return;
+    }
+    
+    const room = multiplayerManager.currentRoom;
+    const config = room.config;
+    const myMoves = room.playerMoves[walletManager.publicKey] || 0;
+    const myMoveCost = myMoves * config.moveCost;
+    
+    if (room.gameState === 'waiting') {
+      roomInfo.textContent = `${config.displayName} Room: ${room.roomId} (${room.players.length}/${config.maxPlayers} players)`;
+      potDisplay.style.display = 'none';
+      playerTurn.style.display = 'none';
+      moveCounter.style.display = 'none';
+    } else if (room.gameState === 'ready') {
+      roomInfo.textContent = `${config.displayName} Room: ${room.roomId} (Ready to start!)`;
+      let potText = `💰 Entry Fee: ${config.entryFee} SOL each | 🏆 Winner gets ${(config.winnerPercentage * 100).toFixed(1)}% of pot`;
+      if (config.runnerUpPercentage > 0) {
+        potText += ` | 🥈 Runner-up gets ${(config.runnerUpPercentage * 100).toFixed(1)}%`;
+      }
+      potDisplay.textContent = potText;
+      potDisplay.style.display = 'block';
+      playerTurn.style.display = 'none';
+      moveCounter.style.display = 'none';
+    } else if (room.gameState === 'playing') {
+      roomInfo.textContent = `${config.displayName} Room: ${room.roomId} (Playing)`;
+      let potText = `💎 Total Pot: ${room.totalPot.toFixed(4)} SOL | 🏆 Winner: ${(room.totalPot * config.winnerPercentage).toFixed(4)} SOL`;
+      if (config.runnerUpPercentage > 0) {
+        potText += ` | 🥈 Runner-up: ${(room.totalPot * config.runnerUpPercentage).toFixed(4)} SOL`;
+      }
+      potDisplay.textContent = potText;
+      potDisplay.style.display = 'block';
+      
+      const isMyTurn = room.currentPlayer === walletManager.publicKey;
+      const shortCurrentPlayer = room.currentPlayer ? `${room.currentPlayer.slice(0, 4)}...${room.currentPlayer.slice(-4)}` : 'Unknown';
+      playerTurn.textContent = isMyTurn ? `🎯 Your turn! (Next move: ${config.moveCost} SOL)` : `⏳ ${shortCurrentPlayer}'s turn`;
+      playerTurn.style.display = 'block';
+      
+      moveCounter.textContent = `🎮 Your Moves: ${myMoves} | 💸 Your Move Cost: ${myMoveCost.toFixed(4)} SOL`;
+      moveCounter.style.display = 'block';
+    } else if (room.gameState === 'finished') {
+      const isWinner = room.winner === walletManager.publicKey;
+      const isRunnerUp = room.runnerUp === walletManager.publicKey;
+      const winnerPayout = room.totalPot * config.winnerPercentage;
+      const runnerUpPayout = room.totalPot * config.runnerUpPercentage;
+      
+      let statusText = '🎯 Game Finished - ';
+      if (isWinner) {
+        statusText += '🏆 You Won!';
+      } else if (isRunnerUp) {
+        statusText += '🥈 You got 2nd place!';
+      } else {
+        statusText += '💔 You Lost';
+      }
+      roomInfo.textContent = statusText;
+      
+      let potText = `💎 Final Pot: ${room.totalPot.toFixed(4)} SOL | 🏆 Winner: ${winnerPayout.toFixed(4)} SOL`;
+      if (config.runnerUpPercentage > 0) {
+        potText += ` | 🥈 Runner-up: ${runnerUpPayout.toFixed(4)} SOL`;
+      }
+      potDisplay.textContent = potText;
+      potDisplay.style.display = 'block';
+      playerTurn.style.display = 'none';
+      
+      moveCounter.textContent = `🎮 Final - Your Moves: ${myMoves} | 💸 Your Total Cost: ${(room.playerInvestments[walletManager.publicKey] || 0).toFixed(4)} SOL`;
+      moveCounter.style.display = 'block';
+    }
+    
+    updatePlayerProgressUI();
+  }
+
+  function setDifficulty(difficulty) {
+    game.difficulty = difficulty;
+    document.querySelectorAll('.controls button').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active'); game.newGame();
+  }
+
+  async function newGame() { 
+    if (multiplayerManager && multiplayerManager.currentRoom && multiplayerManager.currentRoom.gameState === 'ready') {
+      try {
+        await multiplayerManager.startMultiplayerGame();
+        updateMultiplayerUI();
+      } catch (error) {
+        alert('Failed to start multiplayer game: ' + error.message);
+        return;
+      }
+    }
+    
+    game.newGame(); 
+  }
+
+  function useHint() { game.useHint(); }
+
+  function toggleTheme() {
+    const themes = ['default', 'dark', 'neon', 'cyberpunk'];
+    const currentIndex = themes.indexOf(game.currentTheme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    game.currentTheme = themes[nextIndex];
+    document.body.setAttribute('data-theme', game.currentTheme);
+    localStorage.setItem('minesweeper-theme', game.currentTheme);
+    
+    const container = document.querySelector('.game-container');
+    container.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      container.style.transform = 'scale(1)';
+    }, 200);
+  }
+
+  function stopGame() {
+    if (game.gameStarted && !game.gameOver && !game.gameWon && !game.paused) {
+      game.paused = true;
+      clearInterval(game.timerInterval);
+      document.getElementById('gameStatus').textContent = '⏸️ Game Paused';
+      document.getElementById('gameStatus').style.color = '#ff9800';
+      document.getElementById('stopBtn').textContent = 'Continue';
+      document.getElementById('stopBtn').onclick = continueGame;
+    }
+  }
+
+  function continueGame() {
+    if (game.paused && !game.gameOver && !game.gameWon) {
+      game.paused = false;
+      game.timerInterval = setInterval(() => {
+        if (!game.gameOver && !game.gameWon && !game.paused) {
+          const elapsed = Math.floor((Date.now() - game.startTime) / 1000);
+          document.getElementById('timer').textContent = elapsed;
+        }
+      }, 1000);
+      document.getElementById('gameStatus').textContent = 'Game Resumed!';
+      document.getElementById('gameStatus').style.color = 'var(--text-color)';
+      document.getElementById('stopBtn').textContent = 'Stop';
+      document.getElementById('stopBtn').onclick = stopGame;
+    }
+  }
+
+  function toggleSettings() { alert('Settings: Theme cycles 4 modes, Hint for help, mobile touch & stop controls enabled!'); }
+
+  function closeModal() { document.getElementById('gameOverModal').style.display = 'none'; }
+
+
+
+
+
+  // Timer functionality
+  let gameTimer = null;
+  let gameStartTime = 0;
+  let gameElapsedTime = 0;
+
+  function startGameTimer() {
+    gameStartTime = Date.now();
+    gameElapsedTime = 0;
+    if (gameTimer) clearInterval(gameTimer);
+    gameTimer = setInterval(() => {
+      gameElapsedTime = Math.floor((Date.now() - gameStartTime) / 1000);
+      updateGameTimer();
+    }, 1000);
+  }
+
+  function updateGameTimer() {
+    const minutes = Math.floor(gameElapsedTime / 60);
+    const seconds = gameElapsedTime % 60;
+    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const timerEl = document.getElementById('gameTimer');
+    if (timerEl) {
+      timerEl.innerHTML = `⏱️ Game Time: ${timeString}`;
+    }
+  }
+
+  function stopGameTimer() {
+    if (gameTimer) {
+      clearInterval(gameTimer);
+      gameTimer = null;
+    }
+  }
+
+  function updatePlayersDisplay() {
+    const playersListEl = document.getElementById('playersList');
+    if (!playersListEl || !multiplayerManager.currentRoom) return;
+
+    playersListEl.innerHTML = '';
+    
+    const room = multiplayerManager.currentRoom;
+    const maxPlayers = room.config ? room.config.maxPlayers : 2;
+    const connectedPlayers = room.players ? room.players.length : 0;
+    const playerKey = walletManager.publicKey;
+    
+    // Show connected players
+    if (room.players) {
+      room.players.forEach((player, index) => {
+        const isCurrentPlayer = player === playerKey;
+        const isActivePlayer = player === room.currentPlayer;
+        const playerInvestment = room.playerInvestments ? (room.playerInvestments[player] || 0) : 0;
+        
+        const playerEl = document.createElement('div');
+        playerEl.style.cssText = `
+          background: ${isCurrentPlayer ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
+          border: 2px solid ${isActivePlayer ? '#ffd700' : (isCurrentPlayer ? '#4caf50' : '#666')};
+          border-radius: 10px;
+          padding: 10px;
+          min-width: 120px;
+          text-align: center;
+          font-size: 0.9em;
+          ${isActivePlayer ? 'box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);' : ''}
+        `;
+        
+        playerEl.innerHTML = `
+          <div style="font-weight: bold; margin-bottom: 5px;">
+            ${isCurrentPlayer ? '👤 You' : `🎮 Player ${index + 1}`}
+            ${isActivePlayer ? ' ⭐' : ''}
+          </div>
+          <div style="font-size: 0.8em; color: #ccc;">
+            💰 ${playerInvestment.toFixed(4)} SOL
+          </div>
+          <div style="font-size: 0.8em; color: ${isActivePlayer ? '#ffd700' : '#999'};">
+            ${isActivePlayer ? '🎯 Active' : '⏳ Waiting'}
+          </div>
+        `;
+        
+        playersListEl.appendChild(playerEl);
+      });
+    }
+    
+    // Show empty slots
+    for (let i = connectedPlayers; i < maxPlayers; i++) {
+      const emptySlotEl = document.createElement('div');
+      emptySlotEl.style.cssText = `
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px dashed #666;
+        border-radius: 10px;
+        padding: 10px;
+        min-width: 120px;
+        text-align: center;
+        font-size: 0.9em;
+        color: #666;
+      `;
+      
+      emptySlotEl.innerHTML = `
+        <div style="font-weight: bold; margin-bottom: 5px;">
+          🔓 Open Slot
+        </div>
+        <div style="font-size: 0.8em;">
+          Waiting for player...
+        </div>
+      `;
+      
+      playersListEl.appendChild(emptySlotEl);
+    }
+    
+    // Update room info
+    const playersDisplayEl = document.getElementById('playersDisplay');
+    if (playersDisplayEl && room.config) {
+      const roomTypeText = room.config.displayName || 'Room';
+      playersDisplayEl.querySelector('div').textContent = `👥 ${roomTypeText} (${connectedPlayers}/${maxPlayers})`;
+    }
+  }
+
+
+  document.addEventListener('DOMContentLoaded', () => { 
+    game = new Game(); 
+    walletManager = new WalletManager();
+    playerProgress = new PlayerProgress();
+    multiplayerManager = new MultiplayerManager(walletManager);
+    
+    setTimeout(() => {
+      if (walletManager) {
+        walletManager.updateUI();
+      }
+      if (playerProgress) {
+        updatePlayerProgressUI();
+        updateRoomTypeUI();
+      }
+    }, 500);
+  });
+  </script>
+  </body>
+  </html>
