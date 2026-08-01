@@ -1,5 +1,7 @@
 # Go board game with staking rules
 
+Play online: https://inandenizturk.github.io/goboardgame_rules/
+
 This repository contains a browser Go (baduk) board game. The unified game in
 `index.html` keeps the original canvas board and information panel while moving
 the rules into a reusable, UI-free engine. The older standalone HTML variants
