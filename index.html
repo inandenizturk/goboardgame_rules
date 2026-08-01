@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Board Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-container">
+    <h1>Go Board Game</h1>
+    <section class="info-panel">
+      <div class="status-row">
+        <button id="connectWallet">Connect Wallet</button>
+        <span id="walletMode" class="mode simulated">SIMULATED MODE</span>
+        <span class="wallet-info">Balance: <strong id="walletBalance">1.000</strong> SOL</span>
+      </div>
+      <p id="walletAddress" class="wallet-address">No wallet connected. Connect to start.</p>
+      <div class="player-info">
+        <div>Current player: <strong id="playerTurn">Black</strong></div>
+        <div>Stake per stone:
+          <label for="stake"> <select id="stake">
+            <option value="0.00125">0.00125 SOL</option>
+            <option value="0.0025">0.0025 SOL</option>
+            <option value="0.005">0.005 SOL</option>
+          </select></label>
+        </div>
+        <div>Passes: <strong id="passCount">0</strong>/2</div>
+        <div>Black invested: <strong id="blackInvested">0.00000</strong> SOL</div>
+        <div>White invested: <strong id="whiteInvested">0.00000</strong> SOL</div>
+      </div>
+      <div class="captures-info">
+        <div>Black captures: <strong id="capturedWhite">0</strong></div>
+        <div>White captures: <strong id="capturedBlack">0</strong></div>
+      </div>
+      <p id="message" class="message" role="status" aria-live="polite">Connect a wallet or start simulated mode to play.</p>
+      <div class="controls">
+        <button id="playMove">Play Move</button>
+        <button id="pass">Pass</button>
+        <button id="resign">Resign</button>
+      </div>
+      <section id="result" class="result" hidden></section>
+    </section>
+    <canvas id="goBoard" width="600" height="600" aria-label="Go board"></canvas>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
